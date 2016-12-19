@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Obfuscate Sensitive String Literals Online</title> 
+	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+	<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>    
+</head>
+
+<body>
+
+	<a href="https://github.com/bennylp/hide-string">
+		<img style="position: absolute; top: 0; right: 0; border: 0;" 
+			 src="https://camo.githubusercontent.com/38ef81f8aca64bb9a64448d0d70f1308ef5341ab/68747470733a2f2f73332e616d617a6f6e6177732e636f6d2f6769746875622f726962626f6e732f666f726b6d655f72696768745f6461726b626c75655f3132313632312e706e67" alt="Fork me on GitHub" 
+			 data-canonical-src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png">
+	</a>	
+
+<div class="container">
+	<h1>Obfuscate Sensitive String Literals Online</h1>
+
+	<p>In trivial projects, sometimes you want to obfuscate slightly sensitive 
+	information from people who casually browse the source code. 
+	The information you want to hide is not sensitive enough to warrant the use
+	of encryption, but you want to hide it from plain sight nevertheless.</p>
+	
+	<p>That's what this tool is for. This is <strong>not</strong>, of course, 
+	equal to providing strong encryption to your sensitive data.
+	</p>
+	
+	<div class="form-group">
+	  	<label for="intxt">String literals to obfuscate:</label>
+	  	<textarea class="form-control" rows="5" id="intxt" oninput="obfuscate()"
+	  		placeholder="String to obfuscate. Multiple line string is okay" required></textarea>
+	</div>
+	
+	<div class="form-group">
+	  	<label for="lang">Language:</label>
+		<select class="form-control" id="lang" onchange="obfuscate()">
+		  <option value="c">C/C++</option>
+		  <option value="python">Python</option>
+		</select>
+  	</div>
+
+	<div class="form-group">
+	  	<label for="method">Method:</label>
+		<select class="form-control" id="method" onchange="obfuscate()">
+		  <option value="src1">Source Code Obfuscation 1</option>
+		  <option value="obj1">Object Code Obfuscation 1</option>
+		</select>
+  	</div>
+
+	<div class="form-group">
+	  	<label for="result">Result:</label>
+	  	<textarea class="form-control" rows="5" id="result" placeholder="The result will be displayed here" readonly></textarea>
+	</div>
+	
+	<div>
+		<button type="button" class="btn btn-default" onclick="copyToClipboard()">Copy result to Clipboard</button>
+	</div>
+	
+</div>
+
+<script>
+function copyToClipboard() 
+{
+  var elem = document.getElementById('result');
+  // create hidden text element, if it doesn't already exist
+  var targetId = "_hiddenCopyText_";
+  var isInput = elem.tagName === "INPUT" || elem.tagName === "TEXTAREA";
+  var origSelectionStart, origSelectionEnd;
+  if (isInput) {
+      // can just use the original source element for the selection and copy
+      target = elem;
+      origSelectionStart = elem.selectionStart;
+      origSelectionEnd = elem.selectionEnd;
+  } else {
+      // must use a temporary form element for the selection and copy
+      target = document.getElementById(targetId);
+      if (!target) {
+          var target = document.createElement("textarea");
+          target.style.position = "absolute";
+          target.style.left = "-9999px";
+          target.style.top = "0";
+          target.id = targetId;
+          document.body.appendChild(target);
+      }
+      target.textContent = elem.textContent;
+  }
+  // select the content
+  var currentFocus = document.activeElement;
+  target.focus();
+  target.setSelectionRange(0, target.value.length);
+  
+  // copy the selection
+  var succeed;
+  try {
+  	  succeed = document.execCommand("copy");
+  } catch(e) {
+      succeed = false;
+  }
+  // restore original focus
+  if (currentFocus && typeof currentFocus.focus === "function") {
+      currentFocus.focus();
+  }
+  
+  if (isInput) {
+      // restore prior selection
+      elem.setSelectionRange(origSelectionStart, origSelectionEnd);
+  } else {
+      // clear temporary content
+      target.textContent = "";
+  }
+  return succeed;
+}
+
+function unsupported(title)
+{
+	alert(title);
+	return "";
+}
+
+function escape_hex(hexchar)
+{
+	var intxt = document.getElementById('intxt').value;
+	var output = '';
+	
+	for (var i=0; i<intxt.length; i++) {
+		if ("\r\n".indexOf( intxt.charAt(i) ) != -1)
+			output += intxt.charAt(i);
+		else
+			output += hexchar + intxt.charCodeAt(i).toString(16);
+	}
+	
+	output += '';
+	return output;
+}
+
+function obfuscate_c()
+{
+	var intxt = document.getElementById('intxt').value;
+	var method = document.getElementById('method').value;
+	
+	if (method == 'src1') {
+		return escape_hex('\\x');
+	} else if (method == 'obj1') {
+		var output = 'char result[' + (intxt.length + 1).toString() + '];\n';
+		var cnt = 0;
+		
+		for (var i=0; i<intxt.length; i++) {
+			output += "result[" + i.toString() + "] = 0x" + intxt.charCodeAt(i).toString(16) + '; ';
+			if (++cnt >= 4) {
+				output += "\n";
+				cnt = 0;
+			}
+		}
+
+		output += "result[" + intxt.length.toString() + "] = 0;";
+		return output;
+	} else { 
+		return unsupported("Method '" + method + "' is unsupported for C/C++");
+	}
+}
+
+function obfuscate_python()
+{
+	var intxt = document.getElementById('intxt').value;
+	var method = document.getElementById('method').value;
+	if (method == 'src1') {
+		return escape_hex('\\x');
+	} else if (method == 'obj1') {
+		var output = "result = ''\n";
+		for (var i=0; i<intxt.length; i++) {
+			output += "result += '\\x" + intxt.charCodeAt(i).toString(16) + "'\n";
+		}
+		return output;
+	} else {
+		return unsupported("Method '" + method + "' is unsupported for Python");
+	}
+}
+
+function obfuscate() 
+{
+	var lang = document.getElementById('lang').value;
+	var result;
+	if (lang == 'c')
+		result = obfuscate_c();
+	else if (lang == 'python')
+		result = obfuscate_python();
+	else
+		result = unsupported("Language '" + lang + "' is not supported yet");
+	
+	var el = document.getElementById('result');
+	el.value = result;
+}
+</script>
+
+</body>
+</html>
